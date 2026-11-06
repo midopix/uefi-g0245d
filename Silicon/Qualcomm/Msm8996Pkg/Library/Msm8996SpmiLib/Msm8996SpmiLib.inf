@@ -1,0 +1,29 @@
+## @file
+#
+#  MSM8996 SPMI PMIC arbiter v2 library (polling).
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = Msm8996SpmiLib
+  FILE_GUID                      = 7E3A91C4-2D58-4A6B-9F1D-4C8B2E7A5D31
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = Msm8996SpmiLib
+
+[Sources]
+  Msm8996SpmiLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  IoLib
+  DebugLib
+  BaseMemoryLib

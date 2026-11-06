@@ -1,0 +1,44 @@
+## @file
+#  TEMPORARY v92 keypad diagnostic strip (remove in the clean follow-up).
+#
+#  Draws two rows of colour cells at the very bottom of the panel:
+#    top row    = CURRENT raw level of each key source
+#                 yellow=1, red=0, blue=SPMI read failed
+#    bottom row = GREEN if that source ever CHANGED since boot
+#  Columns: PON bit0, PON bit1, PMIC GPIO1/2/4/5, heartbeat.
+#
+#  One boot photo (press volume up / volume down / power, then shoot) settles
+#  the PON polarity question without trusting a Linux #define.  This driver is
+#  diagnostic scaffolding: per PITFALLS.md A5 it must NOT stay in production.
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = KeyProbeDxe
+  FILE_GUID                      = 6D9C4F21-8A73-4B5E-B0D6-2E1F7A3C9B48
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = KeyProbeDxeEntryPoint
+
+[Sources.common]
+  KeyProbeDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+  Msm8996SpmiLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid       ## CONSUMES
+  gEfiSimpleTextInputExProtocolGuid    ## CONSUMES
+
+[Depex]
+  TRUE

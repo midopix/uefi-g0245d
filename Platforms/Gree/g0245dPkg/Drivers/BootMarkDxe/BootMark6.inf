@@ -1,0 +1,32 @@
+## @file
+#  BootMarkDxe #6 - boot progress marker (palette index 6: lime).
+#  Drawn right AFTER DALSys to bisect the vendor-foundation HANG.
+#
+#  The palette index is hard-coded in BootMark6.c.  Do NOT try to pass it via
+#  INF [BuildOptions]: this build chain drops INF-level build options and the
+#  modules silently become byte-identical (v84 pitfall).
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootMark6
+  FILE_GUID                      = A1B2C3D4-0006-4D71-9250-39E057C80006
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = BootMarkDxeEntryPoint
+
+[Sources]
+  BootMark6.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid         ## CONSUMES
+
+[Depex]
+  TRUE

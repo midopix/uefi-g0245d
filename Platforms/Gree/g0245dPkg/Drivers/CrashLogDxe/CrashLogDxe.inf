@@ -1,0 +1,47 @@
+## @file
+#  CrashLogDxe - persist a CPU crash dump to the tail of userdata on any
+#  fatal exception, so it can be recovered from Android over adb with no
+#  serial port. Methodology borrowed from ios-sweet / HackiOS.
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Msm8996CrashLogDxe
+  FILE_GUID                      = 7C4E1A2D-9B33-4F17-8C5A-2E6D8F0A1B3C
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = CrashLogDxeEntryPoint
+
+[Sources]
+  CrashLogDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  g0245dPkg/g0245dPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  UefiRuntimeServicesTableLib
+  DebugLib
+  BaseMemoryLib
+  MemoryAllocationLib
+  UefiLib
+  BaseLib
+
+[Protocols]
+  gEfiCpuArchProtocolGuid                ## CONSUMES
+  gEfiPartitionInfoProtocolGuid          ## CONSUMES
+  gEfiBlockIoProtocolGuid                ## CONSUMES
+  gEfiLoadedImageProtocolGuid            ## CONSUMES
+  gEfiDevicePathToTextProtocolGuid       ## CONSUMES
+
+[Depex]
+  # v88: was CpuArch AND PartitionInfo.  PartitionInfo only appears after BDS
+  # connects controllers, so that depex deferred this driver indefinitely.
+  # Dispatch early instead: the handler must be registered before late DXE;
+  # LocateUserData() copes with "no BlockIo yet" and retries on each crash.
+  TRUE

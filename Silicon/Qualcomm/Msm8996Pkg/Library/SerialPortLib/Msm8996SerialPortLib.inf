@@ -1,0 +1,34 @@
+## @file
+#
+#  MSM8996 SerialPortLib -- polling QUP "low-speed" UART (BLSP2_UART2).
+#
+#  Copyright (c) Microsoft Corporation.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = Msm8996SerialPortLib
+  FILE_GUID                      = FC07CCD6-BE30-4880-8528-6FE5C3842BB6
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = SerialPortLib
+
+[Sources]
+  Msm8996SerialPortLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  IoLib
+  PcdLib
+
+[Pcd]
+  gMsm8996PkgTokenSpaceGuid.PcdUartBase
+  gMsm8996PkgTokenSpaceGuid.PcdUartClockHz
+  gEfiMdePkgTokenSpaceGuid.PcdUartDefaultBaudRate

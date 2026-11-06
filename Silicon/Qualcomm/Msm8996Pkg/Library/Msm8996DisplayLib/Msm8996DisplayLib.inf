@@ -1,0 +1,31 @@
+## @file
+#
+#  MSM8996 cold display bring-up library (MMSS + MDP5 + DSI + PLL/PHY).
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = Msm8996DisplayLib
+  FILE_GUID                      = A2C77E50-6B4D-4F91-9C3A-5D8E1B7F4C26
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = Msm8996DisplayLib
+
+[Sources]
+  Msm8996DisplayLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  IoLib
+  DebugLib
+  BaseMemoryLib
+  TimerLib
+  Msm8996PmicLib

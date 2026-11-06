@@ -1,0 +1,32 @@
+## @file
+#  BootMarkDxe #7 - boot progress marker (palette index 7: white).
+#  Drawn right AFTER SPMI to bisect the vendor-foundation HANG.
+#
+#  The palette index is hard-coded in BootMark7.c.  Do NOT try to pass it via
+#  INF [BuildOptions]: this build chain drops INF-level build options and the
+#  modules silently become byte-identical (v84 pitfall).
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootMark7
+  FILE_GUID                      = A1B2C3D4-0007-4D71-9250-39E057C80007
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = BootMarkDxeEntryPoint
+
+[Sources]
+  BootMark7.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid         ## CONSUMES
+
+[Depex]
+  TRUE

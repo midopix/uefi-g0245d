@@ -1,0 +1,23 @@
+## @file
+#  DiagDrawLib -- framebuffer hex renderer shared by DisplayDiagDxe and
+#  CrashLogDxe.  No dependencies beyond BaseLib/base types, so it is safe to
+#  call from an exception handler.
+#
+#  Copyright (c) 2026, UniXNU contributors. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DiagDrawLib
+  FILE_GUID                      = 3A7C11B4-9E0D-4E4B-9C7A-5D2B1F60C8A3
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = DiagDrawLib
+
+[Sources]
+  DiagDrawLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  g0245dPkg/g0245dPkg.dec

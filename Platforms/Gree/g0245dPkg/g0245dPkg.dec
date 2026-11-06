@@ -1,0 +1,76 @@
+## @file
+#  Package declaration for the Gree G0245D (msm8996 / Snapdragon 820) platform.
+#
+#  WHY THIS FILE EXISTS
+#  --------------------
+#  The reference platform packages (Platforms/Samsung/starqltechnPkg,
+#  Platforms/Qualcomm/qrd8550Pkg) each ship a .dec alongside their .dsc/.fdf.
+#  EDK2 / stuart use it to identify "which package contains this file":
+#  Edk2Path.GetContainingPackage() walks up from a file looking for a .dec,
+#  and the DebugMacroCheck pre-build plugin calls it on ACTIVE_PLATFORM.
+#  Without it that lookup returns None and the build aborts with
+#  "TypeError: argument should be a str or an os.PathLike object ... NoneType".
+#
+#  Note the reference .dec files are zero bytes; this one declares the
+#  platform's own PCDs so that MemoryMapLib / ConfigurationMapLib and any
+#  later g0245d drivers have a proper token space to live in.
+#
+#  Copyright (c) 2026, UniXNU contributors. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x0001001B
+  PACKAGE_NAME                   = g0245dPkg
+  PACKAGE_GUID                   = 7AF1ED7F-3FB8-4955-99C1-B3C910C33472
+  PACKAGE_VERSION                = 0.1
+
+[Includes]
+  Include
+
+[Guids]
+  ##  Token space GUID for the PCDs declared in this package.
+  #  REQUIRED: every <TokenSpaceGuidCName>.<PcdCName> used in [PcdsFixedAtBuild]
+  #  below must have its token-space GUID declared here, otherwise the build
+  #  fails with "error 4000: Value of Guid [...] is not found under [Guids]".
+  gG0245dPkgTokenSpaceGuid      = { 0x421369F4, 0x4B2E, 0x48E2, { 0xA0, 0xFB, 0xB6, 0x4C, 0xAC, 0x2F, 0xED, 0xCA } }
+
+[LibraryClasses]
+  ##  Framebuffer hex renderer (Platforms/Gree/g0245dPkg/Library/DiagDrawLib).
+  #  Used by DisplayDiagDxe and CrashLogDxe.
+  DiagDrawLib|Include/Library/DiagDrawLib.h
+
+  #
+  # NOTE: MemoryMapLib and ConfigurationMapLib are intentionally NOT re-declared
+  # here. Their canonical headers already live in the packages that own them:
+  #     Silicon/Silicium/SiliciumPkg/Include/Library/MemoryMapLib.h
+  #     Silicon/Qualcomm/QcomPkg/Include/Library/ConfigurationMapLib.h
+  # Re-declaring them here shadowed those paths with nonexistent local ones,
+  # which surfaced as:
+  #     "fatal error: 'Library/ConfigurationMapLib.h' file not found"
+  # and earlier as:
+  #     "error F000: The maximum size of VOID* type PCD ... is less than ..."
+  #
+  # g0245dPkg only needs to declare its own PCDs below.
+
+[PcdsFixedAtBuild]
+  #
+  # ---- Identity / SMBIOS ----
+  # [VERIFIED] board.toml + stock Android build props.
+  #
+  gG0245dPkgTokenSpaceGuid.PcdDeviceModel|"G0245D"|VOID*|0x00000100
+  gG0245dPkgTokenSpaceGuid.PcdDeviceManufacturer|"Gree"|VOID*|0x00000101
+
+  #
+  # ---- Panel / framebuffer ----
+  # [VERIFIED] DTB panel node: 1080x1920 @ 32bpp.
+  #
+  gG0245dPkgTokenSpaceGuid.PcdPanelWidth|1080|UINT32|0x00000102
+  gG0245dPkgTokenSpaceGuid.PcdPanelHeight|1920|UINT32|0x00000103
+
+  #
+  # ---- Boot addresses (source: board.toml) ----
+  # [VERIFIED] UEFI FD window 0x92000000 / 0x00300000.
+  #
+  gG0245dPkgTokenSpaceGuid.PcdUefiFdBase|0x92000000|UINT32|0x00000104
+  gG0245dPkgTokenSpaceGuid.PcdUefiFdSize|0x00300000|UINT32|0x00000105

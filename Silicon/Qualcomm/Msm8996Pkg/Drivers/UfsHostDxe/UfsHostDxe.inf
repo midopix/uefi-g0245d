@@ -1,0 +1,45 @@
+## @file
+#  MSM8996 UFS host controller platform driver.
+#
+#  Brings up the UFS power domain / clocks / 14nm QMP PHY and publishes the
+#  EDKII UFS HOST CONTROLLER protocol consumed by
+#  MdeModulePkg/Bus/Ufs/UfsPassThruDxe.
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Msm8996UfsHostDxe
+  FILE_GUID                      = 8C2E7B44-6D5A-4F1B-9A3C-5E7D8B1A2F90
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = UfsHostDxeEntryPoint
+
+[Sources]
+  UfsHostDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  MdeModulePkg/MdeModulePkg.dec
+  Silicon/Qualcomm/Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  MemoryAllocationLib
+  CacheMaintenanceLib
+  UefiLib
+  Msm8996PmicLib
+
+[Protocols]
+  gEdkiiUfsHostControllerProtocolGuid           ## PRODUCES
+
+[Depex]
+  TRUE

@@ -1,0 +1,21 @@
+# Build products and EDK II state
+Build/
+Conf/
+Binaries/
+
+# Generated firmware and device tree blobs
+*.fd
+*.efi
+*.dtb
+*.bin
+*.elf
+*.o
+*.a
+
+# Local backups and patch leftovers
+*.bak*
+*.orig
+*.rej
+
+__pycache__/
+*.pyc

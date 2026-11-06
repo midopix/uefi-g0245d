@@ -1,0 +1,29 @@
+## @file
+#
+#  MSM8996 PM8994 regulator / GPIO library over the SPMI arbiter.
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = Msm8996PmicLib
+  FILE_GUID                      = 8F5B2D97-3C61-4E2A-B7D8-9A1E4C6F5D32
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = Msm8996PmicLib
+
+[Sources]
+  Msm8996PmicLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  BaseLib
+  DebugLib
+  Msm8996SpmiLib

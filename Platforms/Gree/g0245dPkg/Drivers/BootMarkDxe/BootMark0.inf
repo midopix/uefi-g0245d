@@ -1,0 +1,31 @@
+## @file
+#  BootMarkDxe #0 - boot progress marker (palette index 0: orange).
+#
+#  The palette index is hard-coded in BootMark0.c.  Do NOT try to pass it via
+#  INF [BuildOptions]: this build chain drops INF-level build options and the
+#  four modules silently become byte-identical (v84 pitfall).
+##
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = BootMark0
+  FILE_GUID                      = 8A969AC7-48E5-4D71-9250-39E057C8D097
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = BootMarkDxeEntryPoint
+
+[Sources]
+  BootMark0.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  DebugLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid         ## CONSUMES
+
+[Depex]
+  TRUE

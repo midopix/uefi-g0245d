@@ -1,0 +1,32 @@
+## @file
+#
+#  Configuration map for the Gree G0245D (Qualcomm MSM8996).
+#
+#  Copyright (c) Microsoft Corporation.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = ConfigurationMapLib
+  FILE_GUID                      = 7B1D9E44-2F6A-4C08-8E31-5A2C4D9F13B7
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = ConfigurationMapLib
+
+[Sources]
+  ConfigurationMapLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+  #
+  # QcomPkg owns Library/ConfigurationMapLib.h (the EFI_CONFIGURATION_ENTRY_DESCRIPTOR
+  # definition). Without it the compiler cannot find the header:
+  #   "fatal error: 'Library/ConfigurationMapLib.h' file not found"
+  #
+  QcomPkg/QcomPkg.dec

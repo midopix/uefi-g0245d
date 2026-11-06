@@ -1,0 +1,102 @@
+##
+#  Copyright (c) 2011 - 2022, ARM Limited. All rights reserved.
+#  Copyright (c) 2018, Bingxing Wang. All rights reserved.
+#  Copyright (c) Microsoft Corporation.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+#  Package declaration for the Qualcomm MSM8996 (Snapdragon 820/821) silicon.
+#
+#  NOTE ON PROVENANCE
+#  ------------------
+#  Every addressable value below is cross-checked against the device's own
+#  firmware artefacts rather than guessed:
+#    * board.toml                  -- UEFI load addresses / FD geometry
+#    * Resources/DTBs/g0245d.dtb   -- decompiled with dtc (see g0245d.dts)
+#    * emmc_appsboot.mbn           -- Qualcomm aboot/LK image (REA analysis)
+#  Anything that could NOT be confirmed from those sources is deliberately
+#  left as a documented TODO instead of a fabricated constant.
+#
+#  SCOPE RULE (learned the hard way)
+#  ---------------------------------
+#  A DEC must only declare PCDs in its OWN token space. Re-declaring a PCD
+#  owned by another package (e.g. gSiliciumPkgTokenSpaceGuid.*) silently
+#  re-binds its maximum size to the string declared here, which then breaks
+#  any longer value with:
+#      "error F000: The maximum size of VOID* type PCD '<x>' is less than
+#       its actual size occupied."
+#  Values for other packages' PCDs belong in the platform .dsc, not here.
+##
+
+[Defines]
+  DEC_SPECIFICATION              = 0x0001001B
+  PACKAGE_NAME                   = Msm8996Pkg
+  PACKAGE_GUID                   = 326D5202-BA93-47BC-A232-2E47BAD2F654
+  PACKAGE_VERSION                = 0.1
+  PACKAGE_UNI_FILE               = Msm8996Pkg.uni
+
+[Includes]
+  Include
+
+[LibraryClasses]
+  ##  Provides the SEC-phase entry stub for MSM8996.
+  PlatformSecLib|Include/Library/PlatformSecLib.h
+
+  ##  SPMI PMIC arbiter v2 (polling): Msm8996SpmiRead/Write/UpdateBits.
+  Msm8996SpmiLib|Include/Library/Msm8996SpmiLib.h
+
+  ##  PM8994 regulator rails + backlight GPIO on top of Msm8996SpmiLib.
+  Msm8996PmicLib|Include/Library/Msm8996PmicLib.h
+
+  ##  Cold MDP5 + DSI + 14nm PLL/PHY + ft8716 panel bring-up.
+  Msm8996DisplayLib|Include/Library/Msm8996DisplayLib.h
+
+[Guids]
+  ##  Token space GUID for the PCDs declared in this package.
+  #  REQUIRED: every <TokenSpaceGuidCName>.<PcdCName> used in [PcdsFixedAtBuild]
+  #  below must have its token-space GUID declared here, otherwise the build
+  #  fails with "error 4000: Value of Guid [...] is not found under [Guids]".
+  #  NOTE: EDK2 requires the {8,4,4,{2,2,2,2,2,2,2,2}} grouping; a flat
+  #  list of 16 bytes is rejected with "error 3000: Invalid GUID value format".
+  gMsm8996PkgTokenSpaceGuid      = { 0xEDAA8DF9, 0xC18C, 0x49B9, { 0xBE, 0x7D, 0x2C, 0x32, 0x89, 0x28, 0x17, 0xCE } }
+
+  ##  Device-tree platform GUID consumed by DtPlatformDxe.
+  gMsm8996PlatformInfoGuid       = { 0xA7725250, 0x5D66, 0x4988, { 0xB9, 0x9C, 0x77, 0xA0, 0xEB, 0xEA, 0x2E, 0x63 } }
+
+[PcdsFixedAtBuild]
+  #
+  # ---- Debug serial port ----
+  # [VERIFIED] Base 0x075B0000 = BLSP2_UART2.
+  #   Source: DTB node "serial@075b0000", reg = <0x075b0000 0x1000>,
+  #   status = "okay"; independently corroborated by the stock kernel
+  #   command line "console=ttyHSL0,115200,n8".
+  #   NOTE: not the SDM845 UART address.
+  #
+  gMsm8996PkgTokenSpaceGuid.PcdUartBase|0x075B0000|UINT32|0x00000010
+
+  #
+  # ---- UART input clock ----
+  # [DERIVED] 7.3728 MHz -- standard Qualcomm BLSP UART clock.
+  #   TODO(REA): confirm against the clock plan in emmc_appsboot.mbn
+  #   (GCC_BLSP2_AHB_CBCR / BLSP2_UART2_APPS_CBCR) before relying on
+  #   baud-rate accuracy on real hardware.
+  #
+  gMsm8996PkgTokenSpaceGuid.PcdUartClockHz|7372800|UINT32|0x00000011
+
+  #
+  # ---- Framebuffer / display ----
+  # [VERIFIED] 1080x1920 @ 32bpp, from the DTB panel node.
+  #   The GOP is backed by the contiguous splash region carved out by aboot:
+  #   cont_splash_mem base 0x83401000, len 0x023FF000 (36 MiB).
+  #
+  gMsm8996PkgTokenSpaceGuid.PcdFrameBufferWidth|1080|UINT32|0x00000012
+  gMsm8996PkgTokenSpaceGuid.PcdFrameBufferHeight|1920|UINT32|0x00000013
+  gMsm8996PkgTokenSpaceGuid.PcdFrameBufferPixelBpp|32|UINT32|0x00000014
+
+[PcdsFeatureFlag]
+  ##  Set to TRUE once the MSM8996 UFS host controller is implemented.
+  #  NOTE: entries here need all four fields
+  #  (<TokenSpaceGuidCName>.<PcdCName>|<DefaultValue>|<DatumType>|<Token>);
+  #  a bare "|FALSE" is rejected with "error 3000: Invalid PCD Datum".
+  #  DatumType must be BOOLEAN.
+  gMsm8996PkgTokenSpaceGuid.PcdUfs8996Supported|FALSE|BOOLEAN|0x00000020

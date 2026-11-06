@@ -1,0 +1,26 @@
+## @file
+#
+#  Memory map for the Gree G0245D (Qualcomm MSM8996).
+#
+#  Copyright (c) Microsoft Corporation.
+#
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = MemoryMapLib
+  FILE_GUID                      = 4A6E1C31-9C2B-4E58-9F12-6D3B7A5E21C4
+  MODULE_TYPE                   = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = MemoryMapLib
+
+[Sources]
+  MemoryMapLib.c
+
+[Packages]
+  ArmPkg/ArmPkg.dec
+  MdePkg/MdePkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec

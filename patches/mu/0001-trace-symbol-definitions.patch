@@ -1,0 +1,38 @@
+diff --git a/EmbeddedPkg/Library/PrePiLib/PrePiLib.c b/EmbeddedPkg/Library/PrePiLib/PrePiLib.c
+index f50efc738c..119acfa2f2 100644
+--- a/EmbeddedPkg/Library/PrePiLib/PrePiLib.c
++++ b/EmbeddedPkg/Library/PrePiLib/PrePiLib.c
+@@ -8,6 +8,12 @@
+ 
+ #include <PrePi.h>
+ 
++//
++// G0245D port: SEC progress-beacon hook (HANDOFF.md section 8).
++// Definition missing from the minimal Linux pack; restored so Sec.c links.
++//
++VOID (*mPrePiTraceHook) (UINTN Stage) = NULL;
++
+ //
+ // Hack to work in NT32
+ //
+diff --git a/UefiCpuPkg/Library/ArmMmuLib/AArch64/ArmMmuLibCore.c b/UefiCpuPkg/Library/ArmMmuLib/AArch64/ArmMmuLibCore.c
+index 7d81c58816..68e9f7acff 100644
+--- a/UefiCpuPkg/Library/ArmMmuLib/AArch64/ArmMmuLibCore.c
++++ b/UefiCpuPkg/Library/ArmMmuLib/AArch64/ArmMmuLibCore.c
+@@ -31,6 +31,16 @@
+ #include <Library/HobLib.h>
+ #include "ArmMmuLibInternal.h"
+ 
++//
++// G0245D port: cross-module SEC progress-beacon hooks (HANDOFF.md section 8).
++// The Windows-side debug patch defining these was NOT shipped in the minimal
++// Linux pack; MemoryInitPei.c and Sec.c declare them extern, so they must be
++// defined here for the SEC image to link. The hook stays NULL unless SEC
++// installs SecProgressBeacon(); failure stage stays 0 (reported as 32).
++//
++VOID (*mArmMmuTraceHook) (UINTN Stage) = NULL;
++UINTN  mArmMmuFailStage = 0;
++
+ STATIC  ARM_REPLACE_LIVE_TRANSLATION_ENTRY  mReplaceLiveEntryFunc = ArmReplaceLiveTranslationEntry;
+ 
+ /**

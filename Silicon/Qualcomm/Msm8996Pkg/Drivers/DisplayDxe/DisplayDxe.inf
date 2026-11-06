@@ -1,0 +1,43 @@
+## @file
+#  MSM8996 display driver.
+#
+#  Publishes EFI_GRAPHICS_OUTPUT_PROTOCOL over the pre-initialised
+#  contiguous-splash framebuffer (cont_splash_mem, 0x83401000, 1080x1920@32).
+#  Does NOT program MDP5/DSI -- real panel bring-up is a separate project.
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+#
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = Msm8996DisplayDxe
+  FILE_GUID                      = 4B9D1A26-3C57-4E82-A0F1-7D2C8E5B6A41
+  MODULE_TYPE                    = UEFI_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DisplayDxeEntryPoint
+
+[Sources]
+  DisplayDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Silicon/Qualcomm/Msm8996Pkg/Msm8996Pkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  BaseLib
+  BaseMemoryLib
+  CacheMaintenanceLib
+  DebugLib
+  MemoryAllocationLib
+  UefiLib
+  Msm8996DisplayLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid                ## PRODUCES
+
+[Depex]
+  TRUE

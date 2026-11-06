@@ -1,0 +1,33 @@
+## @file
+#  G0245D physical keypad device library (v92).
+#
+#  Reads every key straight from PM8994 over the self-written, bounded
+#  Msm8996SpmiLib.  NO XBL / SMEM / DAL / PlatformInfo dependency -- see
+#  g0245d/PITFALLS.md D3/D4 for why lifting vendor DXEs is fatal here.
+#
+#  Copyright (c) 2026, UniXNU contributors.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x0001001B
+  BASE_NAME                      = KeypadDeviceLib
+  FILE_GUID                      = 3E1B7A6C-5D42-4F18-9C3A-7B2E8D4F1A09
+  MODULE_TYPE                    = BASE
+  VERSION_STRING                 = 1.0
+  LIBRARY_CLASS                  = KeypadDeviceLib
+  CONSTRUCTOR                    = KeypadDeviceConstructor
+
+[Sources.common]
+  KeypadDeviceLib.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  Msm8996Pkg/Msm8996Pkg.dec
+  SiliciumPkg/SiliciumPkg.dec
+
+[LibraryClasses]
+  BaseMemoryLib
+  DebugLib
+  IoLib
+  Msm8996SpmiLib

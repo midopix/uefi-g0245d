@@ -1,0 +1,179 @@
+## @file
+#  g0245dPkg FD description. The firmware volume is loaded by BootShim at
+#  FD_BASE and entered as the UEFI SEC entry. FD_BASE / FD_SIZE are supplied by
+#  build_uefi.py -> DeviceBuild.py as $(FD_BASE)/$(FD_SIZE)/$(FD_BLOCKS) (from
+#  [uefi_fd] in g0245d.toml) and MUST match the -DFD_BASE / -DFD_SIZE passed to
+#  BootShim.S by UniXNU-g0245d/scripts/package-g0245d-boot.py.
+#
+#  The SoC package is Silicon/Qualcomm/Msm8996Pkg (written for this port; see
+#  g0245d.dsc for the provenance notes). NOTE: the vendor chain DOES contain a
+#  UEFI XBL (QFIL xbl.elf, LZMA FV with 79 modules) -- the old "LK aboot only"
+#  claim was wrong. v79..v90 tried reusing XBL DXEs wholesale; only SPMI
+#  survived (SmemDxe hangs -- see g0245d/PITFALLS.md D3/D4). More modules can
+#  be extracted with tools/dump_xbl.py, but vendor DXEs must be rewritten
+#  against this firmware, not lifted as-is.
+#
+#  Copyright (c) 2026, UniXNU contributors. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[FD.SILICIUM_UEFI]
+BaseAddress   = $(FD_BASE)|gArmTokenSpaceGuid.PcdFdBaseAddress # The base address of the FLASH Device.
+Size          = $(FD_SIZE)|gArmTokenSpaceGuid.PcdFdSize        # The size in bytes of the FLASH Device
+ErasePolarity = 1
+
+# This one is tricky, it must be: BlockSize * NumBlocks = Size
+BlockSize     = 0x1000
+NumBlocks     = $(FD_BLOCKS)
+
+################################################################################
+#
+# Following are lists of FD Region layout which correspond to the locations of different
+# images within the flash device.
+#
+################################################################################
+
+0x00000000|$(FD_SIZE)
+gArmTokenSpaceGuid.PcdFvBaseAddress|gArmTokenSpaceGuid.PcdFvSize
+FV = FVMAIN_COMPACT
+
+################################################################################
+#
+# FV Section
+#
+################################################################################
+
+[FV.FvMain]
+FvNameGuid         = CD8D4C84-20AD-4073-8A28-3400FAE05941
+BlockSize          = 0x1000
+NumBlocks          = 0        # This FV gets compressed so make it just big enough
+FvAlignment        = 8
+ERASE_POLARITY     = 1
+MEMORY_MAPPED      = TRUE
+STICKY_WRITE       = TRUE
+LOCK_CAP           = TRUE
+LOCK_STATUS        = TRUE
+WRITE_DISABLED_CAP = TRUE
+WRITE_ENABLED_CAP  = TRUE
+WRITE_STATUS       = TRUE
+WRITE_LOCK_CAP     = TRUE
+WRITE_LOCK_STATUS  = TRUE
+READ_DISABLED_CAP  = TRUE
+READ_ENABLED_CAP   = TRUE
+READ_STATUS        = TRUE
+READ_LOCK_CAP      = TRUE
+READ_LOCK_STATUS   = TRUE
+
+  !include Include/APRIORI.inc
+  !include Include/DXE.inc
+  !include Include/RAW.inc
+
+  # RAM Manager
+  INF SiliciumPkg/Drivers/RamManagerDxe/RamManagerDxe.inf
+
+  # Display: upstream scheme -- map the bootloader's framebuffer, do not touch
+  # MDP5/DSI. See the long note in g0245d.dsc next to the component entry.
+  INF SiliciumPkg/Drivers/SimpleFbDxe/SimpleFbDxe.inf
+
+  INF Silicon/Qualcomm/Msm8996Pkg/Drivers/UfsHostDxe/UfsHostDxe.inf
+
+  # GraphicsConsoleDxe sits HERE, not in Include/DXE.inc: it must be dispatched
+  # after the GOP exists. Its INF has no [Depex], its entry point
+  # LocateProtocol()s the GOP exactly once and never retries, so physical FV
+  # order is the only thing that guarantees ConOut actually gets created.
+  # ConPlatformDxe/ConSplitterDxe remain earlier in DXE.inc and attach the
+  # console device when GraphicsConsoleDxe installs SimpleTextOut.
+  INF MdeModulePkg/Universal/Console/GraphicsConsoleDxe/GraphicsConsoleDxe.inf
+
+  # v77: probe removed -- v76 proved the GOP blit path pixel-perfect; menu
+  # now draws through the physical GOP (Ui.c LocateProtocol first).
+  # INF g0245dPkg/Drivers/DisplayDiagDxe/DisplayDiagDxe.inf
+
+  # Storage stack: UfsPassThruDxe (jedec,ufs-1.1 HCI per DTB) -> SCSI -> BlockIo -> FS
+  INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
+  INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
+  INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+  INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
+  INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
+  INF FatPkg/EnhancedFatDxe/Fat.inf
+
+  # Crash forensics: persist a CPU dump to the tail of userdata on any fatal
+  # exception (no serial port required). See G0245D_FORENSICS_REFERENCE.md.
+  INF g0245dPkg/Drivers/CrashLogDxe/CrashLogDxe.inf
+
+  # v91 CLEAN BASELINE -- the v79..v90 vendor-driver bisect is closed.
+  # SmemDxe was the sole offender: lifted straight from the device's XBL, its
+  # entry point spins waiting for XBL/PBL/TZ state and blocks the single-
+  # threaded DXE dispatcher forever. It is a HANG, not a fault -- v88 proved
+  # the exception hook never fired. Removing it (v90) restored the boot menu.
+  # DALSys(depex SMEM) and PlatformInfo(depex DALSYS) are gone as well: with
+  # no SMEM producer their depex is unsatisfiable, so they were dead entries.
+  # See g0245d/PITFALLS.md D3/D4 for the full evidence chain.
+  #
+  # SPMI stays. depex TRUE, verified to dispatch cleanly on this device, and
+  # it is the only surviving vendor foundation -- the intended base for a
+  # future PMIC / volume-key driver (no SMEM/DAL dependency).
+  INF Binaries/g0245d/QcomPkg/Drivers/SPMI/SPMI.inf
+
+  # v92 keypad input.  Physical FV order matters here:
+  #   KeypadDeviceDxe (depex TRUE) installs the KeypadDevice protocol FIRST;
+  #   KeypadDxe then registers a DriverBinding for it.  Both complete during
+  #   DXE dispatch, before DxeMain hands control to BdsEntry(), whose
+  #   ConnectController() (BdsEntry / platform SetupKeypad) binds the
+  #   DriverBinding and installs SimpleTextIn.
+  #   NOTE (v93, CORRECTED): ConSplitterDxe is NOT a SimpleTextIn protocol
+  #   notify -- it is a DriverBinding whose Supported() requires
+  #   gEfiConsoleInDeviceGuid on the controller.  ConPlatformDxe installs that
+  #   GUID only when the controller's device path matches the ConIn variable
+  #   written by PlatformBootManagerBeforeConsole().  See g0245d/PITFALLS.md
+  #   D8 for the full chain; the old "protocol notify" claim here was wrong.
+  #
+  # KeyProbeDxe is TEMPORARY (PITFALLS.md A5) -- remove in the clean follow-up.
+  INF SiliciumPkg/Drivers/KeypadDeviceDxe/KeypadDeviceDxe.inf
+  INF SiliciumPkg/Drivers/KeypadDxe/KeypadDxe.inf
+  INF g0245dPkg/Drivers/KeyProbeDxe/KeyProbeDxe.inf
+
+  # SmBios
+  INF MdeModulePkg/Universal/SmbiosDxe/SmbiosDxe.inf
+  INF SiliciumPkg/Drivers/SmBiosTableDxe/SmBiosTableDxe.inf
+
+  # Device Tree (G0245D msm8996 blob)
+  INF EmbeddedPkg/Drivers/DtPlatformDxe/DtPlatformDxe.inf
+  FILE FREEFORM = 25462CDA-221F-47DF-AC1D-259CFAA4E326 {
+    SECTION RAW = g0245dPkg/FdtBlob/g0245d.dtb
+    SECTION UI = "Device Tree"
+  }
+
+  # UniXNU UEFI payload (the genuine loader)
+  INF UniXNUPkg/Application/UniXNU/UniXNU.inf
+  INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+
+  !include QcomPkg/Extra.fdf.inc
+
+[FV.FVMAIN_COMPACT]
+FvAlignment        = 8
+ERASE_POLARITY     = 1
+MEMORY_MAPPED      = TRUE
+STICKY_WRITE       = TRUE
+LOCK_CAP           = TRUE
+LOCK_STATUS        = TRUE
+WRITE_DISABLED_CAP = TRUE
+WRITE_ENABLED_CAP  = TRUE
+WRITE_STATUS       = TRUE
+WRITE_LOCK_CAP     = TRUE
+WRITE_LOCK_STATUS  = TRUE
+READ_DISABLED_CAP  = TRUE
+READ_ENABLED_CAP   = TRUE
+READ_STATUS        = TRUE
+READ_LOCK_CAP      = TRUE
+READ_LOCK_STATUS   = TRUE
+
+  INF SiliciumPkg/Sec/Sec.inf
+
+  FILE FV_IMAGE = 9E21FD93-9C72-4c15-8C4B-E77F1DB2D792 {
+    SECTION GUIDED EE4E5898-3914-4259-9D6E-DC7BD79403CF PROCESSING_REQUIRED = TRUE {
+      SECTION FV_IMAGE = FVMAIN
+    }
+  }
+
+  !include SiliciumPkg/Common.fdf.inc

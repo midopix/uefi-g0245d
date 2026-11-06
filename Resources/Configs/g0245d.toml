@@ -1,0 +1,91 @@
+# Mu-Silicium device configuration for Gree G0245D (msm8996 / Snapdragon 820).
+# Consumed by build_uefi.py (parse_device_config) and the UniXNU packer.
+#
+# NOTE on base/size: build_uefi.py does `fd_config["size"] // 4096` and
+# `hex(fd_config.get("base"))`, so these MUST be unquoted TOML hex *integers*
+# (0x...), NOT quoted strings. Quoted strings crash with TypeError.
+
+[boot_shim]
+requires_kernel_header = true
+
+[uefi_fd]
+# FD base/size must match [uefi_fd] in UniXNU-g0245d/board.toml and the
+# -DFD_BASE / -DFD_SIZE passed to BootShim.S by package-g0245d-boot.py.
+base = 0x92000000
+size = 0x300000
+# blocks is derived by build_uefi.py (size // 4096 = 0x300); kept here only
+# for documentation. BlockSize is 0x1000.
+
+[boot_image]
+# Addresses verified against UniXNU-g0245d/board.toml:
+#   kernel  0x80008000 = base 0x80000000 + kernel_offset 0x8000
+#   ramdisk 0x81000000 = base 0x80000000 + ramdisk_offset 0x1000000
+#   tags    0x80000100 = base 0x80000000 + tags_offset    0x100
+base = 0x80000000
+kernel_offset = 0x8000
+ramdisk_offset = 0x1000000
+second_offset = 0xf00000
+tags_offset = 0x100
+pagesize = 4096
+header_version = 0
+
+[boot_image_kernel]
+# The UEFI FD is gzip-compressed and the device DTB appended, exactly as
+# UniXNU-g0245d/scripts/package-g0245d-boot.py does it:
+#   gzip(BootShim.bin + SILICIUM_UEFI.fd) + g0245d.dtb  ->  v0 ANDROID! image
+kernel_compression = "gzip"
+append_dtb = true
+
+[dtb]
+# Single appended DTB matched by aboot's 90-entry table on:
+msm_id = "0xf6/0x30000"
+board_id = "3/0"
+pmic_id = "0x20009/0x2000a"
+source = "device:dts/g0245d.dts"
+include_dirs = ["soc:dts"]
+
+# ---------------------------------------------------------------------------
+# Display transform, measured on the real panel (v73 probe; PITFALLS.md A4).
+# Recorded as comments on purpose: build_uefi.py only reads the sections above,
+# so these notes cannot affect the build. Do NOT change without re-probing.
+#
+#   horizontal : 1:1, no scaling. panel column s <- buffer column (796 - s) mod 1080
+#                (mirror + wrap-around), ColumnOffset = 283
+#   vertical   : simple 1:1 flip
+#   byte order : panel reads (R,G,B) = (P1,P0,P2); a write must therefore be
+#                P0=G, P1=R, P2=B  (GRB)
+#   mapping    : WRITE_BACK + WriteBackInvalidateDataCacheRange after every blit
+#   component  : SiliciumPkg/Drivers/SimpleFbDxe inherits the bootloader FB;
+#                NEVER touch MDP5/DSI registers (PITFALLS.md A7)
+#   console    : GraphicsConsoleDxe must dispatch AFTER SimpleFbDxe in
+#                g0245d.fdf -- no [Depex], one-shot LocateProtocol(GOP) (A3)
+#   debug      : DebugLib MUST be BaseDebugLibNull. DEBUG through ConOut
+#                scrolls the panel 19px per newline and corrupts the menu (A2)
+# ---------------------------------------------------------------------------
+#
+# ---------------------------------------------------------------------------
+# Keypad / input hardware (v92).  Source of truth is the FULL device DTB
+# Resources/DTBs/g0245d.dtb, extracted with tools/dump_gpio_keys.py -- NOT the
+# stripped UniXNU-g0245d/dts/g0245d.dts, which has no gpio_keys node at all.
+# Recorded as comments so build_uefi.py cannot be affected.
+#
+#   gpios phandle 0xf9 -> /soc/qcom,spmi@400f000/qcom,pm8994@0/gpios
+#   => these are PM8994 PMIC GPIOs, NOT TLMM SoC GPIOs (common wrong guess)
+#   PMIC GPIO n peripheral = 0xC000 + 0x100*(n-1); RT_STS @ +0x10, bit0 = level
+#   flags 0x1 = GPIO_ACTIVE_LOW -> PRESSED reads 0
+#
+#     vol_up        PMIC GPIO2  0xC110  KEY_VOLUMEUP   -> SCAN_UP
+#     home          PMIC GPIO1  0xC010  KEY_HOME       -> SCAN_ESC
+#     cam_snapshot  PMIC GPIO4  0xC310                 -> SCAN_LEFT  (spare)
+#     cam_focus     PMIC GPIO5  0xC410  KEY_POWER2     -> SCAN_RIGHT (spare)
+#
+#   PON @ 0x800 (qcom,power-on@800), INT_RT_STS @ 0x810:
+#     pon_1 qcom,pon-type 0 (KPDPWR) KEY_POWER      -> CHAR_CARRIAGE_RETURN
+#     pon_2 qcom,pon-type 1 (RESIN)  KEY_VOLUMEDOWN -> SCAN_DOWN
+#   PON polarity is NOT assumed: KeypadDeviceLib snapshots 0x810 at boot and
+#   treats any bit differing from that baseline as pressed (works either way).
+#
+#   All reads go through Msm8996SpmiLib (bounded 1000-poll timeout).  NEVER
+#   reintroduce vendor ButtonsDxe: it depexes on PlatformInfo -> DALSYS -> SMEM,
+#   and SMEM is the module that hangs the DXE dispatcher (PITFALLS D3/D4).
+# ---------------------------------------------------------------------------

@@ -1,0 +1,36 @@
+## @file
+#  DisplayDiagDxe -- read-only DSI/MDP register dump to the UEFI console.
+#
+#  Dispatched after GraphicsConsoleDxe so gST->ConOut is real; see the long
+#  explanation at the top of DisplayDiagDxe.c.
+#
+#  Copyright (c) 2026, UniXNU contributors. All rights reserved.
+#  SPDX-License-Identifier: BSD-2-Clause-Patent
+##
+
+[Defines]
+  INF_VERSION                    = 0x00010005
+  BASE_NAME                      = DisplayDiagDxe
+  FILE_GUID                      = 7C2A9E44-1D63-4F08-B5A7-3E9D2C81F460
+  MODULE_TYPE                    = DXE_DRIVER
+  VERSION_STRING                 = 1.0
+  ENTRY_POINT                    = DisplayDiagDxeEntryPoint
+
+[Sources]
+  DisplayDiagDxe.c
+
+[Packages]
+  MdePkg/MdePkg.dec
+  g0245dPkg/g0245dPkg.dec
+
+[LibraryClasses]
+  UefiDriverEntryPoint
+  UefiBootServicesTableLib
+  BaseLib
+  BaseMemoryLib
+
+[Protocols]
+  gEfiGraphicsOutputProtocolGuid  ## CONSUMES
+
+[Depex]
+  gEfiGraphicsOutputProtocolGuid
