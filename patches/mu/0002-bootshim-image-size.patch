@@ -1,0 +1,16 @@
+diff --git a/BootShim/BootShim.S b/BootShim/BootShim.S
+index 372201c3..c0c9791f 100644
+--- a/BootShim/BootShim.S
++++ b/BootShim/BootShim.S
+@@ -30,7 +30,10 @@ _StackBase:
+   .quad FD_BASE         /* Text Offset */
+ 
+ _StackSize:
+-  .quad FD_SIZE         /* Image Size */
++  /* Image Size is the whole image, shim included. A difference of two labels is
++   * a constant the assembler resolves itself; an absolute _Payload reference
++   * would need a relocation that objcopy -O binary cannot apply. */
++  .quad (_Payload - _Head) + FD_SIZE
+   .quad 0               /* Flags */
+   .quad 0               /* Reserved */
+   .quad 0               /* Reserved */
