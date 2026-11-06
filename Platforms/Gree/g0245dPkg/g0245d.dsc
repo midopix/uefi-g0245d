@@ -115,6 +115,25 @@
   gEfiMdePkgTokenSpaceGuid.PcdDebugPrintErrorLevel|0x8000004F
 
   #
+  # Advanced Logger buffer (v101).  This board has no usable serial port, so
+  # DEBUG() output is captured in a fixed DRAM window instead and read back
+  # later by AdvancedLogDxe (Tools -> Advanced Logger) as QR frames.
+  #
+  # 0x92300000 is the 1 MiB hole between the end of the UEFI FD window
+  # (0x92000000 + 0x00300000) and the DXE heap (0x95000000).  It is mapped as
+  # EfiReservedMemoryType in MemoryMapLib ("Advanced Logger"), so the DXE
+  # allocator can never hand it out from under the logger.  Base, size and
+  # the MemoryMapLib entry MUST stay in sync.
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerBase|0x92300000
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerPages|0x100
+
+  #
+  # Exported device-model name; AdvancedLogDxe uses it for the log file name.
+  #
+  gUniXNUPkgTokenSpaceGuid.PcdUniXNUDeviceModel|"g0245d"
+
+  #
   # v95 INPUT NOTE: SiliciumPkg.dsc.inc:102 sets
   # gEfiMdeModulePkgTokenSpaceGuid.PcdConInConnectOnDemand|TRUE.  We do NOT
   # redefine that PCD here -- a second [PcdsFixedAtBuild] entry for the same
@@ -138,6 +157,22 @@
   # CrashLogDxe's framebuffer hex renderer, which does not depend on DEBUG.
   #
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
+
+  #
+  # Advanced Logger (v101).  AdvancedLoggerAccessLib is what AdvancedLogDxe
+  # uses to walk the in-memory log; QrEncoderLib turns log bytes into the QR
+  # frames the panel shows under Tools.  The hardware port is the Null
+  # instance: this board has no usable UART to mirror the log to.
+  #
+  AdvancedLoggerAccessLib|AdvLoggerPkg/Library/AdvancedLoggerAccessLib/AdvancedLoggerAccessLib.inf
+  AdvancedLoggerHdwPortLib|AdvLoggerPkg/Library/AdvancedLoggerHdwPortLibNull/AdvancedLoggerHdwPortLibNull.inf
+  QrEncoderLib|MsGraphicsPkg/Library/QrEncoderLib/QrEncoderLib.inf
+
+  #
+  # BaseDebugLibAdvancedLogger's ASSERT() path needs this instance; without it
+  # DxeMain fails to resolve the library class (build error 4000).
+  #
+  AssertLib|AdvLoggerPkg/Library/AssertLib/AssertLib.inf
 
   #
   # UniXNU loader support library
@@ -187,8 +222,35 @@
 [LibraryClasses.common.PEIM]
   DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
 
+#
+# Advanced Logger wiring (v101).  The DxeCore instance owns the buffer: its
+# constructor initialises the logger at PcdAdvancedLoggerBase and installs
+# gAdvancedLoggerProtocolGuid, which is the depex of AdvancedLogDxe.  Every
+# later DXE module's DEBUG() then lands in that buffer instead of /dev/null.
+#
+# SEC and PEI keep BaseDebugLibNull on purpose: the buffer lives at a fixed
+# address in normal DRAM that is only mapped by DXE, and PEI on this board
+# still runs on the hand-built page tables.
+#
 [LibraryClasses.common.DXE_CORE]
-  DebugLib|MdePkg/Library/BaseDebugLibNull/BaseDebugLibNull.inf
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/DxeCore/AdvancedLoggerLib.inf
+
+[LibraryClasses.common.DXE_DRIVER]
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/Dxe/AdvancedLoggerLib.inf
+
+[LibraryClasses.common.DXE_RUNTIME_DRIVER]
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/Runtime/AdvancedLoggerLib.inf
+
+[LibraryClasses.common.UEFI_DRIVER]
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/Dxe/AdvancedLoggerLib.inf
+
+[LibraryClasses.common.UEFI_APPLICATION]
+  DebugLib|AdvLoggerPkg/Library/BaseDebugLibAdvancedLogger/BaseDebugLibAdvancedLogger.inf
+  AdvancedLoggerLib|AdvLoggerPkg/Library/AdvancedLoggerLib/Dxe/AdvancedLoggerLib.inf
 
 #
 # DEBUG is compiled out of RELEASE by default: the toolchain flags carry
@@ -275,6 +337,15 @@
   SiliciumPkg/Drivers/KeypadDxe/KeypadDxe.inf
   g0245dPkg/Drivers/KeyProbeDxe/KeyProbeDxe.inf
 
+  #
+  # Advanced Logger reader (v101).  Publishes gUniXNUMenuPluginProtocolGuid,
+  # which UniXNULib lists under Tools -> Advanced Logger.  It pages the
+  # in-memory log out as QR frames so the log can be captured without a UART.
+  # Depex is gAdvancedLoggerProtocolGuid, installed by DxeCore's
+  # AdvancedLoggerLib constructor.
+  #
+  UniXNUPkg/Driver/AdvancedLogDxe/AdvancedLogDxe.inf
+
   # BootMarkDxe sources stay in the tree (see PITFALLS.md C/E) but are NOT part
   # of the clean baseline. Re-add to FDF + DSC only when a new bisect is needed.
 
@@ -307,3 +378,13 @@
   # PcdPlatformType and broke the build with "Mismatched PCD type".
   #
   gMsm8996PkgTokenSpaceGuid.PcdUfs8996Supported|TRUE
+
+  #
+  # Advanced Logger (v101): the buffer was preallocated by the platform at
+  # PcdAdvancedLoggerBase, so FixedInRAM must be on or the DxeCore instance
+  # tries to carve its own region.  Locator publishes the "AdvLoggerLocator"
+  # variable, which is what makes the log readable after a reset.
+  #
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerFixedInRAM|TRUE
+  gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerLocator|TRUE
+

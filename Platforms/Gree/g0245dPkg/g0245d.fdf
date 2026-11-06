@@ -101,6 +101,9 @@ READ_LOCK_STATUS   = TRUE
   # exception (no serial port required). See G0245D_FORENSICS_REFERENCE.md.
   INF g0245dPkg/Drivers/CrashLogDxe/CrashLogDxe.inf
 
+  # Advanced Logger reader (v101): Tools -> Advanced Logger, QR frames.
+  INF UniXNUPkg/Driver/AdvancedLogDxe/AdvancedLogDxe.inf
+
   # v91 CLEAN BASELINE -- the v79..v90 vendor-driver bisect is closed.
   # SmemDxe was the sole offender: lifted straight from the device's XBL, its
   # entry point spins waiting for XBL/PBL/TZ state and blocks the single-

@@ -54,6 +54,15 @@ gMemoryDescriptor[] = {
   // ---- UEFI firmware volume (board.toml [uefi_fd]) ----
   {"UEFI FD",            0x92000000, 0x00300000, AddMem, SYS_MEM, SYS_MEM_CAP,      BsData, WRITE_BACK},
 
+  // ---- Advanced Logger buffer (v101) ----
+  // [MUST MATCH g0245d.dsc] gAdvLoggerPkgTokenSpaceGuid.PcdAdvancedLoggerBase
+  // (0x92300000) and PcdAdvancedLoggerPages (0x100 = 1 MiB).  The window sits
+  // in the hole between the end of the FD (0x92000000 + 0x00300000) and the
+  // DXE heap (0x95000000).  It is Reserved, not BsData: DxeCore's
+  // AdvancedLoggerLib constructor initialises the logger at this fixed
+  // address, so the allocator must never be able to hand it out.
+  {"Advanced Logger",    0x92300000, 0x00100000, AddMem, SYS_MEM, SYS_MEM_CAP,      Reserv, WRITE_BACK_XN},
+
   // ---- Runtime scratch regions (placed above the FD to stay clear of it) ----
   // [FIXED 2026-10-28] DXE Heap used to start at 0x93000000, i.e. INSIDE the
   // "UEFI FD" window (0x92000000 + 0x300000 = 0x95000000).  The heap was

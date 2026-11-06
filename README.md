@@ -88,6 +88,24 @@ exactly `0x300000` bytes. Two known gaps, both recorded in the device repository
 - the native MDP5/DSI path is not implemented; the menu renders through the GOP
   handoff into `cont_splash_mem@0x83401000`.
 
+### Advanced Logger (v101)
+
+`DebugLib` used to be `BaseDebugLibNull` for every module, so no `DEBUG()` output
+existed anywhere; the only evidence channel was a photo of the panel.  v101 links
+the Mu `AdvLoggerPkg` into the platform:
+
+| Piece | Where |
+| --- | --- |
+| 1 MiB log buffer at `0x92300000` | `g0245d.dsc` (`PcdAdvancedLoggerBase`/`Pages`) + `MemoryMapLib` (`EfiReservedMemoryType`, so DXE never allocates it) |
+| buffer owner / protocol | `AdvancedLoggerLib` DxeCore instance (constructor installs `gAdvancedLoggerProtocolGuid`) |
+| `DEBUG()` sink | `BaseDebugLibAdvancedLogger` for `DXE_CORE`, `DXE_DRIVER`, `DXE_RUNTIME_DRIVER`, `UEFI_DRIVER`, `UEFI_APPLICATION` |
+| reader | `UniXNUPkg/Driver/AdvancedLogDxe` — `Tools -> Advanced Logger`, pages the log out as QR frames |
+
+SEC/PEI deliberately stay on `BaseDebugLibNull`: the buffer only becomes mapped
+in DXE.  There is no UART on this board, so `AdvancedLoggerHdwPortLibNull` is used.
+See `docs/advanced-logger.md` for the why and the traps.
+
+
 ## License
 
 BSD-2-Clause-Patent, matching UniXNU and Mu-Silicium.
