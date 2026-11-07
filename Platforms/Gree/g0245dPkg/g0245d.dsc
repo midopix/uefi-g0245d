@@ -16,11 +16,14 @@
 #  A bootable FD still requires the unwritten NativeUfs8996 / Adreno530 /
 #  Mdp5 / BlspI2c silicon components plus validation on real hardware.
 #
-#  The genuine UEFI payload is unixnu-src/package/UniXNUPkg
-#  (Application/UniXNU + Driver/UniXNUDxe). ArmCpuPkg / ArmDTPlatformPkg /
-#  Drivers/DarwinBoot referenced in earlier drafts are XNU *kernel* drivers
-#  (built as .a static libs by the ./unixnu CLI), NOT UEFI packages, and are not
-#  linked here.
+#  The UEFI payload is unixnu-src/package/UniXNUPkg (Application/UniXNU,
+#  Driver/UniXNUDxe, Driver/UniXNURamDiskDxe, Driver/AdvancedLogDxe) plus
+#  unixnu-src/drivers/DarwinBoot/DarwinBootPkg (Driver/DarwinBoot.inf).
+#  CORRECTION: DarwinBoot.efi is a genuine UEFI_DRIVER (it produces
+#  gUniXNULoaderProtocolGuid), NOT the XNU kernel .a of the same name; the
+#  earlier "DarwinBoot is a kernel driver" note here was wrong. ArmCpuPkg /
+#  ArmDTPlatformPkg are the actual XNU kernel components and are not linked
+#  into the firmware. See README.md "Payload discovery chain".
 #
 #  Build entry:
 #    tools/build-g0245d.sh            (RELEASE, via build_uefi.py -> DeviceBuild.py)
@@ -271,11 +274,34 @@
 
 [Components]
   #
-  # The genuine UniXNU UEFI payload. All SEC/DXE/platform modules are pulled in
-  # by g0245d.fdf (which !includes the source-buildable generic includes).
+  # The UEFI payload. All SEC/DXE/platform modules are pulled in by g0245d.fdf
+  # (which !includes the source-buildable generic includes).
   #
   UniXNUPkg/Application/UniXNU/UniXNU.inf
   UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+
+  #
+  # Payload discovery chain (v103). Without these two the built-in config runs
+  # its countdown, "Return to firmware" exits and BDS has no other boot option,
+  # so the menu ends on "Failed to Find an Operating System!".
+  #
+  #   UniXNURamDiskDxe : reads the SEC entry-argument HOB
+  #                      (DAEE82E6-8090-4E72-BFB9-78C13CD4E359), parses the
+  #                      FDT /chosen/linux,initrd-start/end and publishes a
+  #                      read-only BlockIo + DevicePath (depex TRUE).
+  #                      DiskIoDxe / PartitionDxe / Fat then supply
+  #                      SimpleFileSystem on top of it.
+  #   DarwinBoot       : UEFI_DRIVER producing gUniXNULoaderProtocolGuid,
+  #                      which UniXNUDxe/UniXNU consume to load the XNU kernel.
+  #                      Its package is in drivers/DarwinBoot, added to
+  #                      DeviceBuild.py's PACKAGES_PATH for this overlay.
+  #
+  # Both are real upstream UniXNU components, not placeholders. Whether the
+  # SEC HOB and the payload volume actually line up on this device still needs
+  # a hardware boot to confirm (the board has no serial readback).
+  #
+  UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
+  DarwinBootPkg/Driver/DarwinBoot.inf
 
   #
   # msm8996 silicon drivers written for this port (Silicon/Qualcomm/Msm8996Pkg).

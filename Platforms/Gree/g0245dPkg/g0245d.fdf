@@ -93,6 +93,13 @@ READ_LOCK_STATUS   = TRUE
   INF MdeModulePkg/Bus/Ufs/UfsPassThruDxe/UfsPassThruDxe.inf
   INF MdeModulePkg/Bus/Scsi/ScsiBusDxe/ScsiBusDxe.inf
   INF MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
+
+  # Payload discovery (v103): publish the FDT /chosen initrd as a read-only
+  # BlockIo device BEFORE DiskIo/FAT, so \EFI\UniXNU\unixnu.toml on the
+  # payload volume becomes a SimpleFileSystem the menu can enumerate.
+  # depex TRUE; it is a second BlockIo producer alongside ScsiDiskDxe.
+  INF UniXNUPkg/Driver/UniXNURamDiskDxe/UniXNURamDiskDxe.inf
+
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
   INF FatPkg/EnhancedFatDxe/Fat.inf
@@ -147,9 +154,12 @@ READ_LOCK_STATUS   = TRUE
     SECTION UI = "Device Tree"
   }
 
-  # UniXNU UEFI payload (the genuine loader)
+  # UniXNU UEFI payload (the genuine loader). DarwinBoot is a UEFI_DRIVER
+  # producing gUniXNULoaderProtocolGuid; without it the menu can list a boot
+  # entry but has no loader protocol to hand the kernel to.
   INF UniXNUPkg/Application/UniXNU/UniXNU.inf
   INF UniXNUPkg/Driver/UniXNUDxe/UniXNUDxe.inf
+  INF DarwinBootPkg/Driver/DarwinBoot.inf
 
   !include QcomPkg/Extra.fdf.inc
 

@@ -60,9 +60,15 @@ class CommonPlatform ():
         # NOTE: PACKAGES_PATH entries are resolved relative to the WORKSPACE ROOT
         # (Mu-Silicium/), NOT to this file's directory. From Mu-Silicium that is
         # "../../unixnu-src/package" (up to uefi-g0245d, then unixnu-g0245d).
-        # Only UniXNUPkg is a UEFI package; unixnu-src/drivers/* are XNU kernel
-        # drivers built as .a static libs and must NOT be listed here.
+        #
+        # v103: DarwinBootPkg is also a genuine UEFI package -- its Driver/
+        # DarwinBoot.inf is a UEFI_DRIVER producing gUniXNULoaderProtocolGuid.
+        # It happens to live under drivers/, but that does NOT make it an XNU
+        # kext; the old blanket "drivers/* are kernel drivers" note was wrong.
+        # Every other drivers/* submodule really is an XNU kext (.a / .cpp),
+        # so only DarwinBoot is added here.
         "../../unixnu-src/package",
+        "../../unixnu-src/drivers/DarwinBoot",
     )
 
 # ####################################################################################### #

@@ -65,28 +65,49 @@ redistributed. They are not in this repository: restore them from the device's o
 QFIL package before building, or the build stops at `SPMI.inf is not found`. The
 device repository lists them by hash in `proprietary-files.txt`.
 
-## Mu_Basecore patch
+## Persistent patches
 
-`patches/mu/0001-trace-symbol-definitions.patch` restores three progress-beacon
-symbol definitions (`mPrePiTraceHook`, `mArmMmuTraceHook`, `mArmMmuFailStage`) whose
-declarations exist upstream but whose definitions are absent in the trimmed pack,
-which otherwise fails the SEC link with an undefined symbol. Apply it to the
-submodule once; `scripts/apply-overlay.sh` does that and is idempotent.
+`scripts/apply-overlay.sh` applies both patches under `patches/mu/` and is
+idempotent. They have **different git scopes**, which matters on a fresh checkout:
 
-Build-time patches in `Resources/MuPatches` (Timer, Boot-Manager, Usb-Bus,
-Auth-Service) come from upstream Mu-Silicium and are applied and reverted by
+| Patch | Applies to | What it fixes |
+| --- | --- | --- |
+| `0001-trace-symbol-definitions.patch` | the `Mu_Basecore` submodule | Restores `mPrePiTraceHook` / `mArmMmuTraceHook` / `mArmMmuFailStage`, whose declarations exist upstream but whose definitions are missing from the trimmed pack (otherwise SEC fails to link with undefined symbols). |
+| `0002-bootshim-image-size.patch` | the Mu-Silicium root | ARM64 `image_size` must cover the shim plus the FD: `(_Payload - _Head) + FD_SIZE`, not `FD_SIZE` alone. A label difference is resolved by the assembler; an absolute `_Payload` would need a relocation `objcopy -O binary` cannot apply. |
+
+`Resources/MuPatches` (Timer, Boot-Manager, Usb-Bus, Auth-Service) is a separate
+mechanism: those come from upstream Mu-Silicium and are applied and reverted by
 `build_uefi.py`; do not apply them by hand.
 
 ## State
 
 The firmware builds green and boots on hardware to the UniXNU menu. The FD is
-exactly `0x300000` bytes. Two known gaps, both recorded in the device repository's
-`porting.toml`:
+exactly `0x300000` bytes. The remaining known gap, recorded in the device
+repository's `porting.toml`, is the native MDP5/DSI path: the menu renders
+through the GOP handoff into `cont_splash_mem@0x83401000` instead of driving the
+panel itself.
 
-- the payload discovery chain (`UniXNURamDiskDxe`, `DiskIoDxe`, `Fat`) is not in the
-  DSC/FDF yet, so the menu reports `drivers 0 loaded` and `no boot entry found`;
-- the native MDP5/DSI path is not implemented; the menu renders through the GOP
-  handoff into `cont_splash_mem@0x83401000`.
+### Payload discovery chain (v103)
+
+The earlier "no boot entry found / drivers 0 loaded" gap is closed at the
+firmware level. The documented six-module chain (plus `PartitionDxe`) is now
+in the DSC and FDF:
+
+| Module | Role |
+| --- | --- |
+| `UniXNURamDiskDxe` | SEC entry-argument HOB -> FDT `/chosen/linux,initrd-*` -> read-only BlockIo |
+| `DiskIoDxe` / `PartitionDxe` / `Fat` | SimpleFileSystem on that BlockIo |
+| `UniXNU` / `UniXNUDxe` | menu + `Boot####` registration |
+| `DarwinBoot` | UEFI_DRIVER producing `gUniXNULoaderProtocolGuid` |
+
+`DarwinBootPkg` is added to `DeviceBuild.py`'s `PACKAGES_PATH`; it is a genuine
+UEFI driver, not the XNU kernel component with the same name. The FV has ample
+room (v102 occupied `0x9cbc0` of `0x300000`).
+
+**Build-level verification is not runtime verification.** Whether the SEC HOB
+actually carries the payload FDT on this board, whether the menu enumerates a
+real boot entry, and whether DarwinBoot can hand off to the kernel all require a
+hardware boot. Those are listed as on-device items in `porting.toml`.
 
 ### Advanced Logger (v101)
 
