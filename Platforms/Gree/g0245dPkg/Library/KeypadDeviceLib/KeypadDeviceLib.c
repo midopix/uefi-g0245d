@@ -86,7 +86,7 @@ STATIC CONST UINT16 mGpioRtSts[4] = {
 // pinctrl-spmi-gpio.c encoding).  That was the ONE unverified part of the
 // whole tree (PITFALLS.md D9), and the keys were still dead after v93 was
 // flashed.  Instead of sweeping one guessed value per build, we now try
-// candidates 0..4, read the pad's RT_STS after each, and keep the FIRST one
+// candidates 0..3, read the pad's RT_STS after each, and keep the FIRST one
 // that biases the (active-low) line high.  No photo is needed to pick a value.
 //
 // KeyProbeDxe's existing colour strip then tells us which case we are in:
@@ -94,13 +94,16 @@ STATIC CONST UINT16 mGpioRtSts[4] = {
 //   top row BLUE   -> SPMI read failed (channel / arbiter), NOT a pull value;
 //   top row RED    -> pad still driven low or the writes did not land.
 //
-// MODE_CTL's mode field is bits [6:4] (0x70), not just bit 4.  v93 only
-// cleared bit 4, so a pad left in mode 2 (input+output) or 3 (analog) kept
-// driving the line and no pull value could ever make it read 1.  Clear the
-// whole field to force digital input before trying any bias.
+// MODE_CTL layout (Linux pinctrl-spmi-gpio.c): dir = bits[6:4] (0x70),
+// function = bits[3:1] (0x0E), out_value = bit0.  v93 cleared only bit 4;
+// v94..v105 cleared 0x70.  v106 clears BOTH: a leftover non-zero function
+// selects a special/DTEST mux, so the input stage never sees the physical
+// pin and no pull value can produce a key edge.
 //
-#define PMIC_GPIO_MODE_FIELD_MASK  0x70
-#define PULL_CTL_CANDIDATES       5      // 0..4; 5 = PULL_DISABLE, skip it
+#define PMIC_GPIO_MODE_FIELD_MASK  0x7E
+// Bias encodings 0..3 are pull-ups (0 = 30 uA).  4 is PULL_DOWN and 5 is
+// PULL_DISABLE; neither can bias an active-low key line high.
+#define PULL_CTL_CANDIDATES       4
 #define PAD_PROBE_READS           3      // tolerate a briefly held key / glitch
 
 STATIC
@@ -147,9 +150,9 @@ ConfigureGpioPads (
     Base = (UINT16)(PM8994_GPIO_BASE + 0x100 * (GpioNums[Index] - 1));
 
     //
-    // 1) Force digital INPUT: clear the whole mode field, not just bit 4.
-    //    A pad left in output / analog mode drives the line; no pull value
-    //    can make an unpressed key read 1 until this is fixed.
+    // 1) Force normal GPIO / digital INPUT: clear dir (0x70) AND function
+    //    (0x0E) in MODE_CTL.  A leftover function mux keeps the input stage
+    //    off the physical pin (v106; see the note above).
     //
     Val = 0;
     Status = Msm8996SpmiRead (
@@ -165,13 +168,32 @@ ConfigureGpioPads (
       PM8994_SID, (UINT16)(Base + PMIC_GPIO_REG_MODE_CTL), &Val, 1
       );
 
-    // 2) Master-enable the pad.
+    //
+    // 2) v106: the ONE change under test -- DIG_IN_CTL (0x43) selects the
+    //    input source.  Mainline pmic_gpio_config_set() writes 0 here when
+    //    dtest_buffer == 0, selecting the PHYSICAL PIN.  A non-zero leftover
+    //    from the stock bootloader routes a DTEST buffer into the input
+    //    stage, so RT_STS reports a constant internal value and never
+    //    changes when a key is pressed -- exactly the 2026-11-09 symptom
+    //    ("top row fixed red/yellow, bottom row never green").
+    //
+    //    Deliberately NOT touching DIG_VIN_CTL (0x41) or DIG_OUT_CTL (0x45):
+    //    this board's gpio_keys DT node carries no pinctrl-* / qcom,vin-sel,
+    //    so the power domain was set up by the bootloader and we must not
+    //    overwrite it with a guessed value.  One variable per flash.
+    //
+    Val = 0;
+    Msm8996SpmiWrite (
+      PM8994_SID, (UINT16)(Base + PMIC_GPIO_REG_DIG_IN_CTL), &Val, 1
+      );
+
+    // 3) Master-enable the pad.
     Msm8996SpmiUpdateBits (
       PM8994_SID, (UINT16)(Base + PMIC_GPIO_REG_EN_CTL),
       PMIC_GPIO_MASTER_EN, PMIC_GPIO_MASTER_EN
       );
 
-    // 3) Try each bias encoding; keep the first that makes the line read high.
+    // 4) Try each pull-up encoding; keep the first that makes the line read high.
     Found = FALSE;
     for (Cand = 0; Cand < PULL_CTL_CANDIDATES; Cand++) {
       Val = (UINT8)Cand;
@@ -199,7 +221,7 @@ ConfigureGpioPads (
       }
     }
 
-    // 4) Conservative fallback: restore the mainline 30 uA pull-up value.
+    // 5) Conservative fallback: restore the mainline 30 uA pull-up value.
     if (!Found) {
       Val = 0;
       Msm8996SpmiWrite (

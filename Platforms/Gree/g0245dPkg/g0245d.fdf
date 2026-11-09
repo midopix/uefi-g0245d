@@ -102,6 +102,9 @@ READ_LOCK_STATUS   = TRUE
 
   INF MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   INF MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
+  # v110: producer of UnicodeCollation2 -- EnhancedFatDxe refuses to bind
+  # without it (see the note in g0245d.dsc). Keep it ahead of Fat in FV order.
+  INF MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
   INF FatPkg/EnhancedFatDxe/Fat.inf
 
   # Crash forensics: persist a CPU dump to the tail of userdata on any fatal

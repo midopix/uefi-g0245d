@@ -341,6 +341,16 @@
   MdeModulePkg/Bus/Scsi/ScsiDiskDxe/ScsiDiskDxe.inf
   MdeModulePkg/Universal/Disk/DiskIoDxe/DiskIoDxe.inf
   MdeModulePkg/Universal/Disk/PartitionDxe/PartitionDxe.inf
+  #
+  # v110: EnhancedFatDxe calls InitializeUnicodeCollationSupport() as the very
+  # first thing in FatDriverBindingStart() and bails out with EFI_UNSUPPORTED
+  # when no gEfiUnicodeCollation2ProtocolGuid / gEfiUnicodeCollationProtocolGuid
+  # exists. Nothing in this image produced one, so Fat loaded, installed its
+  # DriverBinding, and then never mounted anything -- and because the bail-out
+  # happens before any media is touched, there was no log line at all on the
+  # real device (v109 probe proved it). EnglishDxe is the MdeModulePkg provider.
+  #
+  MdeModulePkg/Universal/Disk/UnicodeCollation/EnglishDxe/EnglishDxe.inf
   FatPkg/EnhancedFatDxe/Fat.inf
 
   #

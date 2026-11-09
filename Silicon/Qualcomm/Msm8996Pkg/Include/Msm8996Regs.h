@@ -446,12 +446,23 @@
 // gpio_keys entries all carry flags 0x1 = GPIO_ACTIVE_LOW, so a PRESSED key
 // reads 0 here.  Confirmed from Resources/DTBs/g0245d.dtb via
 // tools/dump_gpio_keys.py: gpios phandle 0xf9 -> .../pm8994@0/gpios.
+//
+// v106: cross-checked against Linux drivers/pinctrl/qcom/pinctrl-spmi-gpio.c.
+// Reading 0x10 IS correct (PMIC_MPP_REG_RT_STS, used by pmic_gpio_get), but a
+// usable input pad ALSO needs DIG_IN_CTL (0x43) = 0: it selects the physical
+// pin instead of a DTEST buffer.  A bootloader leftover DTEST mux makes
+// RT_STS report a constant internal value -- the "no key edge" symptom seen
+// on the 2026-11-09 device boot.  DIG_VIN_CTL (0x41) is deliberately left
+// at the bootloader value; this board's gpio_keys DT has no vin/pinctrl data.
 #define PMIC_GPIO_REG_RT_STS              0x10
 #define PMIC_GPIO_REG_MODE_CTL            0x40
+#define PMIC_GPIO_REG_DIG_VIN_CTL         0x41
 #define PMIC_GPIO_REG_DIG_PULL_CTL        0x42
+#define PMIC_GPIO_REG_DIG_IN_CTL          0x43
 #define PMIC_GPIO_REG_DIG_OUT_CTL         0x45
 #define PMIC_GPIO_REG_EN_CTL              0x46
 #define PMIC_GPIO_MODE_DIGITAL_OUTPUT     (1 << 4)
+#define PMIC_GPIO_PULL_DOWN               4
 #define PMIC_GPIO_PULL_DISABLE            5
 #define PMIC_GPIO_MASTER_EN               0x80
 
